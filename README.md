@@ -1,6 +1,6 @@
 # editor-open
 
-You know when you run "git commit", and an editor pops open so you can enter a
+You know when you run `git commit`, and an editor pops open so you can enter a
 commit message? This is a Haskell library that does that.
 
 This library isn't very portable. It relies on the `$EDITOR` environment
