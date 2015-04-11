@@ -219,9 +219,9 @@ runSpecificEditor editorName templ initialContents =
     hSetBinaryMode hdl True
     hSetBuffering hdl NoBuffering
     B.hPut hdl initialContents
-    callProcess editorName [filePath]
-    B.hGetContents hdl
-
+    hClose hdl
+    waitForProcess =<< spawnProcess editorName [filePath]
+    B.readFile filePath
 
 -- |This uses 'getEnv' from "System.Posix" to attempt to
 -- get the user's @$EDITOR@ variable.
