@@ -9,8 +9,11 @@ variable. The concept only exists on *nix systems.
 # Installing
 
 If you're using this library, I assume you're familiar with the basic
-infrastructure of Haskell programs. Just add `editor-open` to the
-`build-depends:` field in your project's `.cabal` file.
+infrastructure of Haskell programs. If not, check out
+[Bitemyapp's guide](https://github.com/bitemyapp/learnhaskell).
+
+Just add `editor-open` to the `build-depends:` field in your project's `.cabal`
+file.
 
 Alternatively, you can just do a one-off installation with:
 
