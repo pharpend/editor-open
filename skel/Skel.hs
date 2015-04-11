@@ -20,7 +20,7 @@
 -- License     : Apache-2.0
 -- Maintainer  : Peter Harpending <peter@harpending.org>
 -- Stability   : experimental
--- Portability : *nix/GHC
+-- Portability : POSIX
 -- 
 
 module Skel where
