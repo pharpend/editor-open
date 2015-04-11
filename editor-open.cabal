@@ -19,6 +19,9 @@ cabal-version:       >=1.10
 bug-reports:         https://notabug.org/pharpend/editor-open/issues/new
 extra-source-files:  
   README.md
+data-files:
+  res/*.json
+  res/*.yaml
 
 library
   -- other-modules:       
