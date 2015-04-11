@@ -15,8 +15,9 @@ maintainer:          peter@harpending.org
 copyright:           Copyright 2015 Peter Harpending
 category:            Text
 build-type:          Simple
--- extra-source-files:  
 cabal-version:       >=1.10
+extra-source-files:  
+  README.md
 
 library
   -- other-modules:       
