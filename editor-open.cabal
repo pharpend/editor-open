@@ -1,0 +1,34 @@
+name:                editor-open
+version:             0.1.0.0
+synopsis:            Open the user's editor for text input.
+description:
+  You know when you run "git commit", and an editor pops open so you can enter a
+  commit message? This is a Haskell library that does that.
+  .
+  This library isn't very portable. It relies on the @$EDITOR@ environment
+  variable. The concept only exists on *nix systems.
+homepage:            https://github.com/pharpend/editor-open
+license:             MIT
+license-file:        LICENSE
+author:              Peter Harpending
+maintainer:          peter@harpending.org
+copyright:           Copyright (c) 2015, Peter Harpending.
+category:            Text
+build-type:          Simple
+-- extra-source-files:  
+cabal-version:       >=1.10
+
+library
+  -- other-modules:       
+  -- other-extensions:    
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+  default-extensions:
+    MultiBranchIfs
+    LambdaCase
+    OverloadedStrings
+  build-depends:
+    base ==4.8.*
+  exposed-modules:     
+    Text.Editor
+  
