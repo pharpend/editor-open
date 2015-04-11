@@ -29,6 +29,7 @@ module Text.Editor where
 
 import qualified Data.ByteString as B
 import           Data.ByteString (ByteString)
+import           Data.ByteString.Char8 (unpack)
 import           Data.Monoid
 import           System.IO
 import           System.IO.Temp
@@ -36,6 +37,15 @@ import           System.Process
 import           System.Posix
 
 -- == Porcelain functions =
+
+-- |If you don't want to use ByteString, use this function.
+-- 
+-- >>> :t runUserEditorDWIM plainTemplate mempty
+-- ByteString
+-- >>> :t wrapStr <$> runUserEditorDWIM plainTemplate mempty
+-- String
+wrapStr :: ByteString -> String
+wrapStr = unpack
 
 -- |This is most likely the function you want to use. It takes a file
 -- type template as an argument, along with what you want displayed
