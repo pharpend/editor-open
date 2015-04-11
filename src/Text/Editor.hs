@@ -78,6 +78,17 @@ runUserEditorDWIM :: Template       -- ^Template for the file name
 runUserEditorDWIM templ initialContents = userEditorDefault _default_editor >>= \theEditor ->
                                             runSpecificEditor theEditor templ initialContents
 
+-- |This is the same as above, it just takes a file as an argument
+-- instead of the ByteString
+-- 
+-- @
+-- runUserEditorDWIMFile templ fp = B.readFile fp >>=  runUserEditorDWIM templ
+-- @
+runUserEditorDWIMFile :: Template       -- ^Template for the file name
+                      -> FilePath       -- ^File containing initial contents
+                      -> IO ByteString  -- ^Resulting ByteString
+runUserEditorDWIMFile templ fp = B.readFile fp >>=  runUserEditorDWIM templ
+
 -- |This is likely the simplest function here. It opens up the user's editor,
 -- and fetches a ByteString from it
 -- 
