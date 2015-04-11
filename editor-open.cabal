@@ -8,7 +8,7 @@ description:
   This library isn't very portable. It relies on the @$EDITOR@ environment
   variable. The concept only exists on *nix systems.
 homepage:            https://github.com/pharpend/editor-open
-license:             MIT
+license:             Apache-2.0
 license-file:        LICENSE
 author:              Peter Harpending
 maintainer:          peter@harpending.org
