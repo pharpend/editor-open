@@ -36,4 +36,12 @@ library
    , unix
   exposed-modules:     
     Text.Editor
-  
+
+source-repository head 
+  type: git
+  location: https://notabug.org/pharpend/editor-open.git
+
+source-repository this
+  type: git
+  location: https://notabug.org/pharpend/editor-open.git
+  tag: 0.1.0.0
