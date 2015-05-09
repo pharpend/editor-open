@@ -7,7 +7,7 @@ description:
   .
   This library isn't very portable. It relies on the @$EDITOR@ environment
   variable. The concept only exists on *nix systems.
-homepage:            https://notabug.org/pharpend/editor-open
+homepage:            https://github.com/pharpend/editor-open
 license:             Apache-2.0
 license-file:        LICENSE
 author:              Peter Harpending
@@ -54,9 +54,9 @@ executable editor-open-test_yaml_file
 
 source-repository head 
   type: git
-  location: https://notabug.org/pharpend/editor-open.git
+  location: https://github.com/pharpend/editor-open.git
 
 source-repository this
   type: git
-  location: https://notabug.org/pharpend/editor-open.git
-  tag: 0.2.0.0
+  location: https://github.com/pharpend/editor-open.git
+  tag: 0.3.0.0
