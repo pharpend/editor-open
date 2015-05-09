@@ -27,96 +27,52 @@
 
 module Text.Editor where
 
+import           Control.Monad.Trans.Resource
+import           Control.Monad.IO.Class
 import qualified Data.ByteString as B
 import           Data.ByteString (ByteString)
 import           Data.ByteString.Char8 (unpack)
+import           Data.Conduit
+import           Data.Conduit.Binary
+import           Data.Conduit.Process
 import           Data.Monoid
+import           System.Directory (getTemporaryDirectory, removeFile)
+import           System.Exit (ExitCode)
 import           System.IO
 import           System.IO.Temp
 import           System.Process
 import           System.Posix
 
--- == Porcelain functions =
-
--- |If you don't want to use ByteString, use this function.
+-- |This is the function you should use.
 -- 
--- >>> :t runUserEditorDWIM plainTemplate mempty
--- ByteString
--- >>> :t wrapStr <$> runUserEditorDWIM plainTemplate mempty
--- String
-wrapStr :: ByteString -> String
-wrapStr = unpack
-
--- |This is most likely the function you want to use. It takes a file
--- type template as an argument, along with what you want displayed
--- when the user opens the editor. It then runs the editor, and
--- returns the version of the text that the user modified.
+-- 'bracketConduit' takes a 'Producer', to produce the contents of the
+-- original file, and a 'Consumer' to consume them, and returns the
+-- result of the consumer, along with the exit code from the editor.
 -- 
--- @
--- runUserEditorDWIM templ initialContents = userEditorDefault _default_editor >>= \theEditor ->
---                                             runSpecificEditor theEditor templ initialContents
--- @
+-- If you don't know how to use conduits, see the
+-- <http://www.stackage.org/package/conduit documentation> for the
+-- conduit package.
 -- 
--- 
--- Examples:
--- 
--- >>> :set -XOverloadedStrings
--- >>> runUserEditorDWIM jsonTemplate "{\n\n}\n"
--- 
--- This will open up the user's @$EDITOR@ configured to edit JSON, and
--- with the initial text:
---  
--- @
--- {
--- }
--- @
--- 
--- There are a bunch of templates. See the "File-type extensions"
--- section. It's also trivially easy to make your own templates. Say
--- you want one for, I dunno, Python:
--- 
--- @
--- pythonTemplate = mkTemplate "py"
--- @
--- 
--- The argument to 'mkTemplate' should be the file extension you
--- want. In that case, I used @"py"@, because Python's file extension
--- is @.py@.
-runUserEditorDWIM :: Template       -- ^Template for the file name
-                  -> ByteString     -- ^Initial contents
-                  -> IO ByteString  -- ^Resulting ByteString
-runUserEditorDWIM templ initialContents = userEditorDefault _default_editor >>= \theEditor ->
-                                            runSpecificEditor theEditor templ initialContents
-
--- |This is the same as above, it just takes a file as an argument
--- instead of the ByteString
--- 
--- @
--- runUserEditorDWIMFile templ fp = B.readFile fp >>=  runUserEditorDWIM templ
--- @
-runUserEditorDWIMFile :: Template       -- ^Template for the file name
-                      -> FilePath       -- ^File containing initial contents
-                      -> IO ByteString  -- ^Resulting ByteString
-runUserEditorDWIMFile templ fp = B.readFile fp >>=  runUserEditorDWIM templ
-
--- |This is likely the simplest function here. It opens up the user's editor,
--- and fetches a ByteString from it
--- 
--- @
--- runUserEditor = userEditorDefault _default_editor >>= \theEditor ->
---                   runSpecificEditor theEditor plainTemplate mempty
--- @
-runUserEditor :: IO ByteString
-runUserEditor = userEditorDefault _default_editor >>= \theEditor ->
-                  runSpecificEditor theEditor plainTemplate mempty
-
--- |This is probably the second-simplest function.
--- 
--- 
-runUserEditorWithTemplate :: Template       -- ^Template for the file name
-                          -> IO ByteString  -- ^Resulting ByteString
-runUserEditorWithTemplate templ = userEditorDefault _default_editor >>= \theEditor ->
-                                    runSpecificEditor theEditor templ mempty
+-- If you really don't want to use conduits, you can use the strict I/O
+-- functions at the bottom of the module. Be warned that those functions
+-- are not very performant.
+bracketConduit :: Template
+               -> Producer (ResourceT IO) ByteString
+               -> Consumer ByteString (ResourceT IO) b
+               -> ResourceT IO (ExitCode,b)
+bracketConduit template producer consumer =
+  do userEditor_ <-
+       liftIO (userEditorDefault _default_editor)
+     systemTempDirectory <- liftIO getTemporaryDirectory
+     (filePath,handle) <-
+       liftIO (openBinaryTempFile systemTempDirectory template)
+     connect producer (sinkHandle handle)
+     liftIO (hClose handle)
+     result <-
+       sourceProcessWithConsumer (proc userEditor_ [filePath])
+                                 consumer
+     liftIO (removeFile filePath)
+     return result
 
 -- == File-type extensions ==
 -- 
@@ -273,3 +229,87 @@ _editor = "EDITOR"
 -- @
 _ftempl :: String
 _ftempl = "tmp"
+
+-- == Bad functions =
+-- 
+-- These are memory hogs, but exist for backwards compatibility
+
+-- |If you don't want to use ByteString, use this function.
+-- 
+-- >>> :t runUserEditorDWIM plainTemplate mempty
+-- ByteString
+-- >>> :t wrapStr <$> runUserEditorDWIM plainTemplate mempty
+-- String
+wrapStr :: ByteString -> String
+wrapStr = unpack
+
+-- |This is most likely the function you want to use. It takes a file
+-- type template as an argument, along with what you want displayed
+-- when the user opens the editor. It then runs the editor, and
+-- returns the version of the text that the user modified.
+-- 
+-- @
+-- runUserEditorDWIM templ initialContents = userEditorDefault _default_editor >>= \theEditor ->
+--                                             runSpecificEditor theEditor templ initialContents
+-- @
+-- 
+-- 
+-- Examples:
+-- 
+-- >>> :set -XOverloadedStrings
+-- >>> runUserEditorDWIM jsonTemplate "{\n\n}\n"
+-- 
+-- This will open up the user's @$EDITOR@ configured to edit JSON, and
+-- with the initial text:
+--  
+-- @
+-- {
+-- }
+-- @
+-- 
+-- There are a bunch of templates. See the "File-type extensions"
+-- section. It's also trivially easy to make your own templates. Say
+-- you want one for, I dunno, Python:
+-- 
+-- @
+-- pythonTemplate = mkTemplate "py"
+-- @
+-- 
+-- The argument to 'mkTemplate' should be the file extension you
+-- want. In that case, I used @"py"@, because Python's file extension
+-- is @.py@.
+runUserEditorDWIM :: Template       -- ^Template for the file name
+                  -> ByteString     -- ^Initial contents
+                  -> IO ByteString  -- ^Resulting ByteString
+runUserEditorDWIM templ initialContents = userEditorDefault _default_editor >>= \theEditor ->
+                                            runSpecificEditor theEditor templ initialContents
+
+-- |This is the same as above, it just takes a file as an argument
+-- instead of the ByteString
+-- 
+-- @
+-- runUserEditorDWIMFile templ fp = B.readFile fp >>=  runUserEditorDWIM templ
+-- @
+runUserEditorDWIMFile :: Template       -- ^Template for the file name
+                      -> FilePath       -- ^File containing initial contents
+                      -> IO ByteString  -- ^Resulting ByteString
+runUserEditorDWIMFile templ fp = B.readFile fp >>=  runUserEditorDWIM templ
+
+-- |This is likely the simplest function here. It opens up the user's editor,
+-- and fetches a ByteString from it
+-- 
+-- @
+-- runUserEditor = userEditorDefault _default_editor >>= \theEditor ->
+--                   runSpecificEditor theEditor plainTemplate mempty
+-- @
+runUserEditor :: IO ByteString
+runUserEditor = userEditorDefault _default_editor >>= \theEditor ->
+                  runSpecificEditor theEditor plainTemplate mempty
+
+-- |This is probably the second-simplest function.
+-- 
+-- 
+runUserEditorWithTemplate :: Template       -- ^Template for the file name
+                          -> IO ByteString  -- ^Resulting ByteString
+runUserEditorWithTemplate templ = userEditorDefault _default_editor >>= \theEditor ->
+                                    runSpecificEditor theEditor templ mempty
