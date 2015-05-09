@@ -35,6 +35,8 @@ library
   build-depends:
      base ==4.8.*
    , bytestring
+   , conduit >=1.0
+   , conduit-extra
    , process >=1.2
    , temporary
    , unix
