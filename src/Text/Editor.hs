@@ -43,37 +43,6 @@ import           System.IO.Temp
 import           System.Process
 import           System.Posix
 
--- |This is the function you should use.
--- 
--- 'bracketConduit' takes a 'Producer', to produce the contents of the
--- original file, and a 'Consumer' to consume them, and returns the
--- result of the consumer, along with the exit code from the editor.
--- 
--- If you don't know how to use conduits, see the
--- <http://www.stackage.org/package/conduit documentation> for the
--- conduit package.
--- 
--- If you really don't want to use conduits, you can use the strict I/O
--- functions at the bottom of the module. Be warned that those functions
--- are not very performant.
-bracketConduit :: Template
-               -> Producer (ResourceT IO) ByteString
-               -> Consumer ByteString (ResourceT IO) b
-               -> ResourceT IO (ExitCode,b)
-bracketConduit template producer consumer =
-  do userEditor_ <-
-       liftIO (userEditorDefault _default_editor)
-     systemTempDirectory <- liftIO getTemporaryDirectory
-     (filePath,handle) <-
-       liftIO (openBinaryTempFile systemTempDirectory template)
-     connect producer (sinkHandle handle)
-     liftIO (hClose handle)
-     result <-
-       sourceProcessWithConsumer (proc userEditor_ [filePath])
-                                 consumer
-     liftIO (removeFile filePath)
-     return result
-
 -- == File-type extensions ==
 -- 
 -- If you use one of the extensions below, you'll likely enable syntax
