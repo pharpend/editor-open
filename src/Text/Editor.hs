@@ -27,14 +27,9 @@
 
 module Text.Editor where
 
-import           Control.Monad.Trans.Resource
-import           Control.Monad.IO.Class
 import qualified Data.ByteString as B
 import           Data.ByteString (ByteString)
 import           Data.ByteString.Char8 (unpack)
-import           Data.Conduit
-import           Data.Conduit.Binary
-import           Data.Conduit.Process
 import           Data.Monoid
 import           System.Directory (getTemporaryDirectory, removeFile)
 import           System.Exit (ExitCode)
