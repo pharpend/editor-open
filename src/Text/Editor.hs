@@ -43,6 +43,81 @@ import           System.IO.Temp
 import           System.Process
 import           System.Posix
 
+-- == Functions ==
+
+-- |If you don't want to use ByteString, use this function.
+-- 
+-- >>> :type runUserEditorDWIM plainTemplate mempty
+-- IO ByteString
+-- >>> :type fmap wrapStr (runUserEditorDWIM plainTemplate mempty)
+-- IO String
+wrapStr :: ByteString -> String
+wrapStr = unpack
+
+-- |This is most likely the function you want to use. It takes a file
+-- type template as an argument, along with what you want displayed when
+-- the user opens the editor. It then runs the editor, and returns the
+-- version of the text that the user modified.
+-- 
+-- 
+-- Examples:
+-- 
+-- >>> :set -XOverloadedStrings
+-- >>> runUserEditorDWIM jsonTemplate "{\n\n}\n"
+-- 
+-- This will open up the user's @$EDITOR@ configured to edit JSON, and
+-- with the initial text:
+--  
+-- @
+-- {
+-- }
+-- @
+-- 
+-- There are a bunch of templates. See the "File-type extensions"
+-- section. It's also trivially easy to make your own templates. Say
+-- you want one for, I dunno, Python:
+-- 
+-- @
+-- pythonTemplate = mkTemplate "py"
+-- @
+-- 
+-- The argument to 'mkTemplate' should be the file extension you
+-- want. In that case, I used @"py"@, because Python's file extension
+-- is @.py@.
+runUserEditorDWIM :: Template       -- ^Template for the file name
+                  -> ByteString     -- ^Initial contents (strict ByteString)
+                  -> IO ByteString  -- ^Resulting (strict) ByteString
+runUserEditorDWIM templ initialContents =
+  do theEditor <- userEditorDefault _default_editor
+     runSpecificEditor theEditor templ initialContents
+
+-- |This is the same as above, it just takes a file as an argument
+-- instead of the ByteString
+-- 
+-- @
+-- runUserEditorDWIMFile templ fp = B.readFile fp >>=  runUserEditorDWIM templ
+-- @
+runUserEditorDWIMFile :: Template       -- ^Template for the file name
+                      -> FilePath       -- ^File containing initial contents
+                      -> IO ByteString  -- ^Resulting ByteString
+runUserEditorDWIMFile templ fp = B.readFile fp >>= runUserEditorDWIM templ
+
+-- |Open up the user's editor with no initial contents.
+runUserEditor :: IO ByteString
+runUserEditor =
+  do theEditor <- userEditorDefault _default_editor
+     runSpecificEditor theEditor plainTemplate mempty
+
+-- |This is probably the second-simplest function.
+-- 
+-- 
+runUserEditorWithTemplate :: Template       -- ^Template for the file name
+                          -> IO ByteString  -- ^Resulting ByteString
+runUserEditorWithTemplate templ =
+  userEditorDefault _default_editor >>=
+  \theEditor ->
+    runSpecificEditor theEditor templ mempty
+
 -- == File-type extensions ==
 -- 
 -- If you use one of the extensions below, you'll likely enable syntax
@@ -125,28 +200,29 @@ yamlTemplate = mkTemplate "yaml"
 -- == Plumbing =
 -- |Open an editor. You probably don't want to use this function.
 -- 
--- @
--- runSpecific editorName templ initialContents =
---   withSystemTempFile templ $ \filePath hdl -> do
---     hSetBinaryMode hdl True
---     hSetBuffering hdl NoBuffering
---     B.hPut hdl initialContents
---     callProcess editorName [filePath]
---     B.hGetContents hdl
--- @
--- 
 runSpecificEditor :: String        -- ^Name of the editor.
                   -> Template      -- ^Template for the file name.
                   -> ByteString    -- ^Initial contents of the file.
                   -> IO ByteString -- ^Resulting ByteString.
 runSpecificEditor editorName templ initialContents =
-  withSystemTempFile templ $ \filePath hdl -> do
-    hSetBinaryMode hdl True
-    hSetBuffering hdl NoBuffering
-    B.hPut hdl initialContents
-    hClose hdl
-    waitForProcess =<< spawnProcess editorName [filePath]
-    B.readFile filePath
+  withSystemTempFile
+    templ
+    (\filePath hdl ->
+       do
+          -- Write to the handle
+          hSetBinaryMode hdl True
+          hSetBuffering hdl NoBuffering
+          B.hPut hdl initialContents
+          -- Close the handle
+          hClose hdl
+          -- Open the editor
+          prc <-
+            spawnProcess editorName
+                         [filePath]
+          -- Wait for the editor
+          waitForProcess prc
+          -- Send back the file contents
+          B.readFile filePath)
 
 -- |This uses 'getEnv' from "System.Posix" to attempt to
 -- get the user's @$EDITOR@ variable.
@@ -166,9 +242,11 @@ userEditor = getEnv _editor
 -- @
 userEditorDefault :: String -- ^Default value if @$EDITOR@ is not found.
                   -> IO String
-userEditorDefault def = userEditor >>= \case
-                          Just e  -> pure e
-                          Nothing -> pure def
+userEditorDefault def =
+  userEditor >>=
+  \case
+    Just e -> pure e
+    Nothing -> pure def
 
 
 -- == Internal variables ==
@@ -199,86 +277,3 @@ _editor = "EDITOR"
 _ftempl :: String
 _ftempl = "tmp"
 
--- == Bad functions =
--- 
--- These are memory hogs, but exist for backwards compatibility
-
--- |If you don't want to use ByteString, use this function.
--- 
--- >>> :t runUserEditorDWIM plainTemplate mempty
--- ByteString
--- >>> :t wrapStr <$> runUserEditorDWIM plainTemplate mempty
--- String
-wrapStr :: ByteString -> String
-wrapStr = unpack
-
--- |This is most likely the function you want to use. It takes a file
--- type template as an argument, along with what you want displayed
--- when the user opens the editor. It then runs the editor, and
--- returns the version of the text that the user modified.
--- 
--- @
--- runUserEditorDWIM templ initialContents = userEditorDefault _default_editor >>= \theEditor ->
---                                             runSpecificEditor theEditor templ initialContents
--- @
--- 
--- 
--- Examples:
--- 
--- >>> :set -XOverloadedStrings
--- >>> runUserEditorDWIM jsonTemplate "{\n\n}\n"
--- 
--- This will open up the user's @$EDITOR@ configured to edit JSON, and
--- with the initial text:
---  
--- @
--- {
--- }
--- @
--- 
--- There are a bunch of templates. See the "File-type extensions"
--- section. It's also trivially easy to make your own templates. Say
--- you want one for, I dunno, Python:
--- 
--- @
--- pythonTemplate = mkTemplate "py"
--- @
--- 
--- The argument to 'mkTemplate' should be the file extension you
--- want. In that case, I used @"py"@, because Python's file extension
--- is @.py@.
-runUserEditorDWIM :: Template       -- ^Template for the file name
-                  -> ByteString     -- ^Initial contents
-                  -> IO ByteString  -- ^Resulting ByteString
-runUserEditorDWIM templ initialContents = userEditorDefault _default_editor >>= \theEditor ->
-                                            runSpecificEditor theEditor templ initialContents
-
--- |This is the same as above, it just takes a file as an argument
--- instead of the ByteString
--- 
--- @
--- runUserEditorDWIMFile templ fp = B.readFile fp >>=  runUserEditorDWIM templ
--- @
-runUserEditorDWIMFile :: Template       -- ^Template for the file name
-                      -> FilePath       -- ^File containing initial contents
-                      -> IO ByteString  -- ^Resulting ByteString
-runUserEditorDWIMFile templ fp = B.readFile fp >>=  runUserEditorDWIM templ
-
--- |This is likely the simplest function here. It opens up the user's editor,
--- and fetches a ByteString from it
--- 
--- @
--- runUserEditor = userEditorDefault _default_editor >>= \theEditor ->
---                   runSpecificEditor theEditor plainTemplate mempty
--- @
-runUserEditor :: IO ByteString
-runUserEditor = userEditorDefault _default_editor >>= \theEditor ->
-                  runSpecificEditor theEditor plainTemplate mempty
-
--- |This is probably the second-simplest function.
--- 
--- 
-runUserEditorWithTemplate :: Template       -- ^Template for the file name
-                          -> IO ByteString  -- ^Resulting ByteString
-runUserEditorWithTemplate templ = userEditorDefault _default_editor >>= \theEditor ->
-                                    runSpecificEditor theEditor templ mempty
