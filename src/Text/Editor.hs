@@ -45,15 +45,6 @@ import           System.Posix
 
 -- == Functions ==
 
--- |If you don't want to use ByteString, use this function.
--- 
--- >>> :type runUserEditorDWIM plainTemplate mempty
--- IO ByteString
--- >>> :type fmap wrapStr (runUserEditorDWIM plainTemplate mempty)
--- IO String
-wrapStr :: ByteString -> String
-wrapStr = unpack
-
 -- |This is most likely the function you want to use. It takes a file
 -- type template as an argument, along with what you want displayed when
 -- the user opens the editor. It then runs the editor, and returns the
@@ -277,3 +268,11 @@ _editor = "EDITOR"
 _ftempl :: String
 _ftempl = "tmp"
 
+-- |If you don't want to use ByteString, use this function.
+-- 
+-- >>> :type runUserEditorDWIM plainTemplate mempty
+-- IO ByteString
+-- >>> :type fmap wrapStr (runUserEditorDWIM plainTemplate mempty)
+-- IO String
+wrapStr :: ByteString -> String
+wrapStr = unpack
