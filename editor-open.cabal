@@ -58,6 +58,20 @@ executable editor-open-test_yaml_file
   -- other-modules:       
   -- other-extensions:    
 
+executable editor-open-test_yaml_file_conduit
+  hs-source-dirs:      tests/
+  default-language:    Haskell2010
+  build-depends:
+     base ==4.8.*
+   , bytestring
+   , conduit >=1.2.3 && <1.3
+   , conduit-extra
+   , editor-open
+   , resourcet
+  main-is:             test_yaml_file_conduit.hs
+  -- other-modules:       
+  -- other-extensions:    
+
 source-repository head 
   type: git
   location: https://github.com/pharpend/editor-open.git
