@@ -36,15 +36,10 @@ import System.IO (stdout)
 import Text.Editor (bracketConduit, plainTemplate)
 
 main :: IO ()
-main =
-  do schemaFP <-
-       getDataFileName "res/bug-schema.yaml"
-     (exitCode,result) <-
-       runResourceT
-         (bracketConduit plainTemplate
-                         (toProducer (sourceFile schemaFP))
-                         (toConsumer sinkLbs))
-     case exitCode of
-       ExitSuccess -> connect (sourceLbs result) (sinkHandle stdout)
-       ExitFailure i ->
-         fail (mappend "Editor process failed with exit code " (show i))
+main = do
+         schemaFP <- getDataFileName "res/bug-schema.yaml"
+         result <- runResourceT
+           (bracketConduit plainTemplate
+                           (toProducer (sourceFile schemaFP))
+                           (toConsumer sinkLbs))
+         connect (sourceLbs result) (sinkHandle stdout)

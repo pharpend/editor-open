@@ -27,12 +27,14 @@
 
 module Text.Editor where
 
+import           Control.Monad.Trans.Resource
+import           Control.Monad.IO.Class
 import qualified Data.ByteString as B
 import           Data.ByteString (ByteString)
 import           Data.ByteString.Char8 (unpack)
+import           Data.Conduit
+import           Data.Conduit.Binary
 import           Data.Monoid
-import           System.Directory (getTemporaryDirectory, removeFile)
-import           System.Exit (ExitCode)
 import           System.IO
 import           System.IO.Temp
 import           System.Process
@@ -103,6 +105,31 @@ runUserEditorWithTemplate templ =
   userEditorDefault _default_editor >>=
   \theEditor ->
     runSpecificEditor theEditor templ mempty
+
+--- |This is the function you should use.
+--- 
+--- 'bracketConduit' takes a 'Producer', to produce the contents of the
+--- original file, and a 'Consumer' to consume them, and returns the
+--- result of the consumer.
+--- 
+--- If you don't know how to use conduits, see the
+--- <http://www.stackage.org/package/conduit documentation> for the
+--- conduit package.
+--- 
+--- If you really don't want to use conduits, you can use the strict I/O
+--- functions
+bracketConduit :: Template 
+               -> Producer (ResourceT IO) ByteString
+               -> Consumer ByteString (ResourceT IO) b
+               -> ResourceT IO b
+bracketConduit template source consumer =
+    withSystemTempFile template $ \filePath hdl -> do
+        editor <- liftIO $ userEditorDefault _default_editor
+        connect source (sinkHandle hdl)
+        liftIO $ spawnProcess editor [filePath] >>= waitForProcess
+        -- Seek to the beginning of the file again
+        liftIO $ hSeek hdl AbsoluteSeek 0
+        connect (sourceHandle hdl) consumer
 
 -- == File-type extensions ==
 -- 

@@ -1,5 +1,5 @@
 name:                editor-open
-version:             0.4.0.2
+version:             0.5.0.0
 synopsis:            Open the user's $EDITOR for text input.
 description:
   You know when you run @git commit@, and an editor pops open so you can enter a
@@ -37,9 +37,13 @@ library
   build-depends:
      base ==4.8.*
    , bytestring
+   , conduit >=1.2.3
+   , conduit-extra
    , directory
    , process >=1.2
+   , resourcet
    , temporary
+   , transformers
    , unix
   exposed-modules:     
     Text.Editor
@@ -55,20 +59,19 @@ executable editor-open-test_yaml_file
   -- other-modules:       
   -- other-extensions:    
 
--- executable editor-open-test_yaml_file_conduit
---   buildable: False
---   hs-source-dirs:      tests/
---   default-language:    Haskell2010
---   build-depends:
---      base ==4.8.*
---    , bytestring
---    , conduit >=1.2.3 && <1.3
---    , conduit-extra
---    , editor-open
---    , resourcet
---   main-is:             test_yaml_file_conduit.hs
---   -- other-modules:       
---   -- other-extensions:    
+executable editor-open-test_yaml_file_conduit
+   hs-source-dirs:      tests/
+   default-language:    Haskell2010
+   build-depends:
+      base ==4.8.*
+    , bytestring
+    , conduit >=1.2.3
+    , conduit-extra
+    , editor-open
+    , resourcet
+   main-is:             test_yaml_file_conduit.hs
+   -- other-modules:       
+   -- other-extensions:    
 
 source-repository head 
   type: git
@@ -77,4 +80,4 @@ source-repository head
 source-repository this
   type: git
   location: https://github.com/pharpend/editor-open.git
-  tag: 0.4.0.2
+  tag: 0.5.0.0
