@@ -250,16 +250,16 @@ userEditor = getEnv _editor
 -- @$EDITOR@ variable doesn't exist.
 -- @
 -- userEditorDefault def = userEditor >>= \case
---                           Just e  -> pure e
---                           Nothing -> pure def
+--                           Just e  -> return e
+--                           Nothing -> return def
 -- @
 userEditorDefault :: String -- ^Default value if @$EDITOR@ is not found.
                   -> IO String
 userEditorDefault def =
   userEditor >>=
   \case
-    Just e -> pure e
-    Nothing -> pure def
+    Just e ->  return e
+    Nothing -> return def
 
 
 -- == Internal variables ==
