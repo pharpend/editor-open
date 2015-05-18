@@ -19,7 +19,7 @@
 -- Copyright   : Copyright 2015 Peter Harpending
 -- License     : Apache-2.0
 -- Maintainer  : Peter Harpending <peter@harpending.org>
--- Stability   : experimental
+-- Stability   : stable
 -- Portability : POSIX
 -- 
 -- You know when you run @git commit@, and a little editor pops up?
