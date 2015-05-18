@@ -7,6 +7,10 @@ description:
   .
   This library isn't very portable. It relies on the @$EDITOR@ environment
   variable. The concept only exists on *nix systems.
+  .
+  CHANGES
+  .
+  [0.5.0.0] Now use conduits on the backend. Support @base\<4.8@
 homepage:            https://github.com/pharpend/editor-open
 license:             Apache-2.0
 license-file:        LICENSE
