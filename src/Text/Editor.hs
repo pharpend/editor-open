@@ -4,7 +4,7 @@
 -- may not use this file except in compliance with the License.  You
 -- may obtain a copy of the License at
 -- 
---     http://www.apache.org/licenses/LICENSE-2.0
+-- http://www.apache.org/licenses/LICENSE-2.0
 -- 
 -- Unless required by applicable law or agreed to in writing, software
 -- distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,7 +19,7 @@
 -- Copyright   : Copyright 2015 Peter Harpending
 -- License     : Apache-2.0
 -- Maintainer  : Peter Harpending <peter@harpending.org>
--- Stability   : stable
+-- Stability   : experimental
 -- Portability : POSIX
 -- 
 -- You know when you run @git commit@, and a little editor pops up?
@@ -27,6 +27,7 @@
 
 module Text.Editor where
 
+import           Control.Applicative
 import           Control.Monad.Trans.Resource
 import           Control.Monad.IO.Class
 import qualified Data.ByteString as B
@@ -218,33 +219,30 @@ runSpecificEditor :: String        -- ^Name of the editor.
                   -> ByteString    -- ^Initial contents of the file.
                   -> IO ByteString -- ^Resulting ByteString.
 runSpecificEditor editorName templ initialContents =
-  withSystemTempFile
-    templ
-    (\filePath hdl ->
-       do
-          -- Write to the handle
-          hSetBinaryMode hdl True
-          hSetBuffering hdl NoBuffering
-          B.hPut hdl initialContents
-          -- Close the handle
-          hClose hdl
-          -- Open the editor
-          prc <-
-            spawnProcess editorName
-                         [filePath]
-          -- Wait for the editor
-          waitForProcess prc
-          -- Send back the file contents
-          B.readFile filePath)
+  withSystemTempFile templ
+    (\filePath hdl -> do
+       -- Write to the handle
+       hSetBinaryMode hdl True
+       hSetBuffering hdl NoBuffering
+       B.hPut hdl initialContents
+       -- Close the handle
+       hClose hdl
+       -- Open the editor
+       prc <- spawnProcess editorName [filePath]
+       -- Wait for the editor
+       waitForProcess prc
+       -- Send back the file contents
+       B.readFile filePath)
 
 -- |This uses 'getEnv' from "System.Posix" to attempt to
--- get the user's @$EDITOR@ variable.
+-- get the user's @$EDITOR@ variable. Failing that, try the @$VISUAL@
+-- variable.
 -- 
--- @
--- userEditor = getEnv _editor
--- @
 userEditor :: IO (Maybe String)
-userEditor = getEnv _editor
+userEditor = do
+  editors <- mapM getEnv _editors
+  return (foldr (<|>) empty editors)
+
 
 -- |Wrapper around 'userEditor' that includes a fallback option if the
 -- @$EDITOR@ variable doesn't exist.
@@ -269,18 +267,19 @@ userEditorDefault def =
 -- |The default editor if no other editor is found
 -- 
 -- @
--- _default_editor = "nano"
+-- _default_editor = "vi"
 -- @
 _default_editor :: String
-_default_editor = "nano"
+_default_editor = "vi"
 
--- |The variable we should search when finding the user's editor.
+-- |The list of variables we should search when finding the user's editor.
 -- 
--- @
--- _editor = "EDITOR"
--- @
-_editor :: String
-_editor = "EDITOR"
+-- > _editor = ["EDITOR", "VISUAL"]
+--
+-- Since: 0.6.0.0
+--
+_editors :: [String]
+_editors = ["EDITOR", "VISUAL"]
 
 -- |The standard filename template
 -- 
